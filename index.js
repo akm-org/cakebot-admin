@@ -1,5 +1,6 @@
 require('dotenv').config();
 const fs = require('fs');
+const http = require('http');
 const path = require('path');
 const mongoose = require('mongoose');
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
@@ -36,6 +37,19 @@ for (const file of fs.readdirSync(evtDir).filter(f => f.endsWith('.js'))) {
 
 process.on('unhandledRejection', e => console.error('[unhandledRejection]', e));
 process.on('uncaughtException', e => console.error('[uncaughtException]', e));
+
+// HTTP keepalive server (required for Render Web Service free tier)
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+  const status = {
+    bot: client.user ? client.user.tag : 'starting',
+    ready: client.isReady?.() || false,
+    mongo: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    uptime: process.uptime(),
+  };
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(status, null, 2));
+}).listen(PORT, () => console.log(`[http] keepalive listening on ${PORT}`));
 
 (async () => {
   try {
